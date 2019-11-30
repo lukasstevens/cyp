@@ -155,8 +155,8 @@ checkProof prop (ParseInduction dtRaw overRaw casesRaw) env = errCtxt ctxtMsg $ 
 
     checkPcHyps over recVars rpcHyps = do
         pcHyps <- traverse (traverse (state . declareProp)) rpcHyps
-        let indHyps = map (substFreeProp prop . instOver) recVars
-        lift $ for_ pcHyps $ \(Named name prop) -> case prop `elem` indHyps of
+        let indHyps = map (generalizeExceptProp recVars . substFreeProp prop . instOver) recVars
+        lift $ for_ pcHyps $ \(Named name prop) -> case any (\ih -> matchProp prop ih [] /= Nothing) indHyps of
             True -> return ()
             False -> err $
                 text ("Induction hypothesis " ++ name ++ " is not valid")

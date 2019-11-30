@@ -1,0 +1,34 @@
+Lemma: length (xs ++ zs) .=. length xs + length zs
+
+Proof by induction on List xs
+
+Case []
+
+    To show: length ([] ++ zs) .=. length [] + length zs
+
+    Proof
+                                 length ([] ++ zs)
+        (by def ++)          .=. length zs
+
+                                 length [] + length zs
+        (by def length)      .=. 0 + length zs
+        (by arith)           .=. length zs
+    QED
+
+Case x:xs
+
+    To show: length ((x : xs) ++ zs) .=. length (x : xs) + length zs
+    IH: length (xs ++ ys) .=. length xs + length ys
+
+    Proof
+                                 length ((x:xs) ++ zs)
+        (by def ++)          .=. length (x : (xs ++ zs))
+        (by def length)      .=. 1 + length (xs ++ zs)
+        (by IH)              .=. 1 + (length xs + length zs)
+
+                             length (x:xs) + length zs
+        (by def length)      .=. (1 + length xs) + length zs
+        (by arith)           .=. 1 + (length xs + length zs)
+    QED
+
+QED

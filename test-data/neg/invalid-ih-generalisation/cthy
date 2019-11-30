@@ -1,0 +1,14 @@
+data List a = [] | a : (List a)
+
+length [] = 0
+length (x:xs) = 1 + length xs
+
+[] ++ ys = ys
+(x:xs) ++ ys = x : xs ++ ys
+
+axiom arith: 0 + b .=. b
+axiom arith: (a + b) + c .=. a + (b + c)
+
+declare_sym zs
+
+goal length (xs ++ zs) .=. length xs + length zs
