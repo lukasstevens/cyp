@@ -53,6 +53,7 @@ data ParseCase = ParseCase
 
 data ParseCompCase = ParseCompCase
     { pccCaseNum :: Int
+    , pccCaseVars :: [String]
     , pccBody :: ParseCaseBody
     }
 
@@ -342,8 +343,10 @@ compCaseParser = do
     keywordCase
     lineSpaces
     caseNum <- caseNumParser 
+    lineSpaces
+    vars <- manyTill (wordParser "case variable" <* lineSpaces) eol 
     manySpacesOrComment
-    ParseCompCase caseNum <$> caseBodyParser
+    ParseCompCase caseNum vars <$> caseBodyParser
 
 manySpacesOrComment :: Parsec [Char] u ()
 manySpacesOrComment = skipMany $ void space <|> commentParser

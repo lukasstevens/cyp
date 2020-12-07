@@ -1,6 +1,6 @@
 Lemma: length (splice xs ys) .=. length xs + length ys
 Proof by computation induction on xs ys with splice
-    Case 1
+    Case 1 ys
     To show: length (splice [] ys) .=. length [] + length ys
     Proof
                                     length (splice [] ys)
@@ -9,7 +9,7 @@ Proof by computation induction on xs ys with splice
         (by def length)         .=. length [] + length ys
     QED
 
-    Case 2 
+    Case 2 x xs ys
     To show: length (splice (x:xs) ys) .=. length (x:xs) + length ys
     IH: length (splice ys xs) .=. length ys + length xs
     Proof

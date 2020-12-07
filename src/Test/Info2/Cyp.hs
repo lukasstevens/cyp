@@ -171,18 +171,18 @@ checkProof prop (ParseInduction dtRaw overRaw casesRaw) env = errCtxt ctxtMsg $ 
 
 checkProof prop (ParseCompInduction funRaw oversRaw casesRaw) env = errCtxt ctxtMsg $ do
     flip evalStateT env $ do
-        overs <- forM oversRaw validateOver
+        overs <- forM oversRaw $ validateVar "induction variable"
         env <- get
         lift $ validateCases overs casesRaw env
         return prop
     where
         ctxtMsg = "Induction on the computation of" <+> quotes (text funRaw)
 
-        validateOver t = do
+        validateVar msg t = do
             t' <- state (declareTerm $ Free t)
             case t' of
                 Free v -> return v
-                _ -> lift $ err $ "Term" <+> quotes (unparseTerm t') <+> "is not a valid induction variable"
+                _ -> lift $ err $ "Term" <+> quotes (unparseTerm t') <+> "is not a valid" <+> msg
 
         funEqs = namedVal <$> filter (\namedProp -> namedName namedProp == "def " ++ funRaw) (axioms env)
         funArity = length $ snd $ stripComb $ propLhs $ head funEqs
@@ -195,7 +195,7 @@ checkProof prop (ParseCompInduction funRaw oversRaw casesRaw) env = errCtxt ctxt
             where
                 missingCase caseNums = find (`notElem` caseNums) [1..length funEqs]
 
-        validateCase overs env ParseCompCase{pccCaseNum = caseNum, pccBody = pcb}
+        validateCase overs env ParseCompCase{pccCaseNum = caseNum, pccCaseVars = caseVarsRaw, pccBody = pcb}
             | null funEqs = err $ hsep ["The function", quotes (text funRaw), "does not exist"]
             | length overs < funArity = err $ hsep ["Fewer variables than arity of function", quotes (text funRaw), "given"]
             | length overs > funArity = err $ hsep ["More variables than arity of function", quotes (text funRaw), "given"]
@@ -207,25 +207,29 @@ checkProof prop (ParseCompInduction funRaw oversRaw casesRaw) env = errCtxt ctxt
                 let funEq = funEqs !! (caseNum - 1)
                 let (_, funEqInsts) = stripComb (propLhs funEq)
 
+                caseVars <- forM caseVarsRaw $ validateVar "case variable"
+                let schematicCaseVars = foldr collectSchematics [] funEqInsts
                 let schematicSubgoal = substFreeProp prop $ zip overs funEqInsts
+                varSubst <- case compare (length caseVars) (length schematicCaseVars) of
+                    LT -> lift $ err "Too few case variables"
+                    GT -> lift $ err "Too many case variables"
+                    EQ -> return $ zip schematicCaseVars (Free <$> caseVars) 
+                let subgoal = substProp schematicSubgoal varSubst 
 
                 case pcbToShow pcb of
                     Nothing -> lift $ errStr "Missing 'To show'"
                     Just rawToShow -> do
                         toShow <- state (declareProp rawToShow)
-                        case matchProp toShow schematicSubgoal [] of
-                            Nothing -> lift . err $
-                                           "'To show' does not match subgoal:"
-                                           `indent` (
-                                                "To show:" <+> unparseProp toShow $+$
-                                                debug ("Subgoal:" <+> unparseProp schematicSubgoal))
-                            Just unifier -> do
-                                let subgoal = substProp schematicSubgoal unifier
-                                userHyps <- checkPcHyps overs (recArgs $ subst (propRhs funEq) unifier) $ pcbAssms pcb
-                                modify (\env -> env{axioms = userHyps ++ axioms env})
-                                env <- get
-                                Prop _ _ <- lift $ checkProof subgoal (pcbProof pcb) env
-                                return caseNum
+                        when (toShow /= subgoal) $ lift . err $
+                            "'To show' does not match subgoal:"
+                            `indent` (
+                                 "To show:" <+> unparseProp toShow $+$
+                                 debug ("Subgoal:" <+> unparseProp subgoal))
+                        userHyps <- checkPcHyps overs (recArgs $ subst (propRhs funEq) varSubst) $ pcbAssms pcb
+                        modify (\env -> env{axioms = userHyps ++ axioms env})
+                        env <- get
+                        Prop _ _ <- lift $ checkProof subgoal (pcbProof pcb) env
+                        return caseNum
 
         recArgs t@(Application _ _)
             | t0 == Const symIf = []
