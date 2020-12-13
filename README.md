@@ -39,6 +39,9 @@ where `<background.cthy>` defines the program and available lemmas and `<proof.c
 
 The source code for cyp also contains some example theories and proofs (look for the files in `test-data/pos`).
 
+### AUR Package
+Install `cyp-lukasstevens-git` (caution, not maintained by me) with `makepkg` or with your favourite AUR helper.
+
 
 ## Syntax of Proofs
 
